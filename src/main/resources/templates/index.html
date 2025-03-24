@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Ideas para Redes Sociales</title>
+
+    <!-- Se carga TailwindCSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Se carga el JavaScript de la aplicación de forma diferida -->
+    <script defer src="/js/app.js"></script>
+
+    <style>
+        /* Animaciones para el estado "pensando" */
+        .animate-thinking { animation: bounce 1s infinite; }
+        .animate-thinking span { animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-thinking span:nth-child(2) { animation-delay: 0.2s; }
+        .animate-thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); }
+            50% { transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Estilos para tooltips (ayuda contextual) */
+        .tooltip { display: none; }
+        .has-tooltip:hover .tooltip { display: block; }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+<main class="py-10">
+    <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+        <!-- Contenedor principal con borde, sombra y fondo blanco -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+            <!-- Encabezado principal -->
+            <div class="border-b border-gray-200 bg-white px-6 py-5">
+                <h1 class="text-2xl font-bold text-gray-900">Generador de Ideas para Redes Sociales</h1>
+                <p class="mt-2 text-sm text-gray-500">
+                    Genera ideas creativas y personalízalas según diferentes estilos de comunicación.
+                </p>
+            </div>
+
+            <!-- Formulario para generar ideas -->
+            <div class="px-6 py-5">
+                <form th:action="@{/generar}" method="post" id="generadorForm" class="space-y-4">
+                    <!-- Campo para introducir el tema -->
+                    <div>
+                        <label for="tema" class="block text-sm font-medium text-gray-700">
+                            ¿Sobre qué tema deseas generar contenido?
+                        </label>
+                        <div class="mt-1">
+                            <textarea id="tema" name="tema" rows="3" th:text="${tema}"
+                                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                      placeholder="Ej: Consejos de productividad para desarrolladores" required>
+                            </textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botón para enviar el formulario -->
+                    <button type="submit" id="btnGenerar"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                        <!-- Texto normal del botón -->
+                        <span class="normal-state">Generar Ideas</span>
+                        <!-- Estado de carga: se muestra mientras se procesa la petición -->
+                        <span class="loading-state hidden">
+                            <span class="animate-thinking inline-flex items-center">
+                                Pensando<span>.</span><span>.</span><span>.</span>
+                            </span>
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Sección de resultados: ideas, hashtags y formulario para refinar la idea -->
+            <div th:if="${resultado != null}" id="resultadosContainer" class="border-t border-gray-200">
+                <div class="px-6 py-5 space-y-6">
+
+                    <!-- Bloque para mostrar las ideas generadas -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Ideas Generadas</h2>
+                        <div class="mt-4 grid gap-4">
+                            <!-- Se recorre la lista de ideas con Thymeleaf -->
+                            <div th:each="idea : ${resultado.ideas}"
+                                 class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+                                <h3 class="text-base font-medium text-gray-900" th:text="${idea.titulo}"></h3>
+                                <p class="mt-2 text-sm text-gray-500" th:text="${idea.descripcion}"></p>
+                                <div class="mt-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                          th:text="'Engagement: ' + ${idea.engagement} + '%'"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloque para mostrar los hashtags sugeridos -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Hashtags Sugeridos</h2>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <!-- Se recorre la lista de hashtags -->
+                            <span th:each="hashtag : ${resultado.hashtags}"
+                                  class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors duration-200">
+                                <span th:text="'#' + ${hashtag.nombre}"></span>
+                                <span class="ml-1.5 text-xs text-gray-500" th:text="'(' + ${hashtag.relevancia} + '%)'"></span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Formulario para refinar la idea seleccionada -->
+                    <div th:if="${refinamiento == null}" class="mt-8">
+                        <form id="refinamientoForm" class="space-y-6">
+
+                            <!-- Sección para seleccionar la idea a personalizar -->
+                            <div class="space-y-3">
+                                <h3 class="text-base font-medium text-gray-900">
+                                    Selecciona una idea para personalizar
+                                </h3>
+                                <div class="grid gap-3">
+                                    <!-- Recorre cada idea para generar un radio button -->
+                                    <div th:each="idea, iterStat : ${resultado.ideas}"
+                                         class="relative flex items-start bg-gray-50 rounded-lg p-4">
+                                        <div class="flex items-center h-5">
+                                            <input type="radio" name="ideaSeleccionada"
+                                                   th:id="'idea' + ${iterStat.index}"
+                                                   th:value="${idea.descripcion}"
+                                                   required
+                                                   class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                        </div>
+                                        <div class="ml-3">
+                                            <label th:for="'idea' + ${iterStat.index}"
+                                                   class="text-sm font-medium text-gray-900"
+                                                   th:text="${idea.titulo}"></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grid de perspectivas: permite elegir el autor para cada categoría -->
+                            <div class="space-y-6">
+                                <h3 class="text-base font-medium text-gray-900">Perspectivas (Opcional)</h3>
+                                <div class="grid md:grid-cols-3 gap-6">
+                                    <!-- Recorre cada categoría configurada -->
+                                    <div th:each="categoria : ${configuracionPersonalidades.categorias}"
+                                         class="space-y-4 p-4 bg-gray-50 rounded-lg">
+                                        <h4 class="text-sm font-semibold text-gray-900">
+                                            <!-- Se muestran el icono y el nombre de la categoría -->
+                                            <span th:text="${categoria.icono}"></span>
+                                            <span th:text="${categoria.nombre}"></span>
+                                        </h4>
+                                        <div class="space-y-2">
+                                            <!-- Se generan los radio buttons para cada autor de la categoría -->
+                                            <label th:each="autor : ${categoria.autores}"
+                                                   class="flex items-center space-x-2 group has-tooltip">
+                                                <input type="radio"
+                                                       th:name="${categoria.id}"
+                                                       th:value="${autor.id}"
+                                                       th:data-autor-nombre="${autor.nombre}"
+                                                       class="text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                                <span class="text-sm relative">
+                                                    <span th:text="${autor.nombre}"></span>
+                                                    <!-- Tooltip con la descripción del autor -->
+                                                    <span class="tooltip absolute left-0 bottom-full mb-2 bg-black text-white text-xs rounded px-2 py-1 w-48"
+                                                          th:text="${autor.descripcion}"></span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botón para enviar el formulario de refinamiento -->
+                            <button type="submit" id="btnRefinar"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                <span class="normal-state">Personalizar Idea</span>
+                                <span class="loading-state hidden">
+                                    <span class="animate-thinking inline-flex items-center">
+                                        Personalizando<span>.</span><span>.</span><span>.</span>
+                                    </span>
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Contenedor donde se mostrarán los resultados del refinamiento (se actualiza vía AJAX) -->
+                    <div id="resultadosRefinamiento"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Se inyecta la configuración de personalidades desde el backend en una variable global -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    window.configPersonalidades = [[${configuracionPersonalidades}]];
+    /*]]>*/
+</script>
+
+</body>
+</html>
